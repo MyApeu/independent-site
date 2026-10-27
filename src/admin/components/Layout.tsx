@@ -10,13 +10,13 @@ export default function AdminLayout() {
   }
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-    { icon: Image, label: 'Media Library', path: '/admin/media' },
-    { icon: Home, label: 'Homepage', path: '/admin/homepage' },
-    { icon: Package, label: 'Products', path: '/admin/products' },
-    { icon: FolderTree, label: 'Categories', path: '/admin/categories' },
-    { icon: FileText, label: 'Factory & Capabilities', path: '/admin/factory' },
-    { icon: MessageSquare, label: 'Inquiries', path: '/admin/inquiries' },
+    { icon: LayoutDashboard, label: '仪表盘', path: '/admin' },
+    { icon: Image, label: '媒体库', path: '/admin/media' },
+    { icon: Home, label: '首页管理', path: '/admin/homepage' },
+    { icon: Package, label: '产品管理', path: '/admin/products' },
+    { icon: FolderTree, label: '分类管理', path: '/admin/categories' },
+    { icon: FileText, label: '工厂与能力', path: '/admin/factory' },
+    { icon: MessageSquare, label: '询盘管理', path: '/admin/inquiries' },
   ]
 
   return (
@@ -28,8 +28,8 @@ export default function AdminLayout() {
               <span className="text-white font-bold font-serif">JH</span>
             </div>
             <div>
-              <div className="text-sm font-semibold">Jintaihong CMS</div>
-              <div className="text-xs text-gray-400">Admin Panel</div>
+              <div className="text-sm font-semibold">金泰宏 CMS</div>
+              <div className="text-xs text-gray-400">管理后台</div>
             </div>
           </div>
         </div>
@@ -51,7 +51,7 @@ export default function AdminLayout() {
         <div className="p-4 border-t border-white/10">
           <button onClick={logout} className="flex items-center gap-3 px-3 py-2 w-full hover:bg-white/5 transition-colors text-gray-400 hover:text-white">
             <LogOut size={18} />
-            <span className="text-sm">Logout</span>
+            <span className="text-sm">退出登录</span>
           </button>
         </div>
       </aside>
