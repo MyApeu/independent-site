@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-orange: #F58220;
+  --color-brand-black: #0a0a0a;
+  --color-brand-dark: #111111;
+  --color-brand-charcoal: #1a1a1a;
+  --color-cream: #f8f7f5;
+  --color-warm-cream: #f5f3ef;
+  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: #ffffff;
+  color: #111111;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------
+   Hero — layered hero: background photo + left-to-right dark fade
+   The section fills exactly the first screen below the sticky header.
+   --------------------------------------------------------------- */
+.hero {
+  --hero-header-offset: 79px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: calc(100svh - var(--hero-header-offset));
+  overflow: hidden;
+  background-color: #0a0a0a;
+  color: #ffffff;
+}
+
+@media (min-width: 1024px) {
+  .hero {
+    --hero-header-offset: 87px;
+  }
+}
+
+.hero__background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--hero-bg-desktop);
+  background-position: var(--hero-bg-position, center center);
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 767px) {
+  .hero__background {
+    background-image: var(--hero-bg-mobile, var(--hero-bg-desktop));
+  }
+}
+
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.94) 26%,
+    rgba(0, 0, 0, 0.62) 48%,
+    rgba(0, 0, 0, 0.24) 72%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+.hero__eyebrow {
+  display: flex;
+  align-items: center;
+  color: #f58220;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+
+.hero__highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  color: #d4d4d4;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+.hero__highlights li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .hero__content {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+  .hero__highlights {
+    gap: 0.5rem 1.25rem;
+    font-size: 0.75rem;
+  }
+}

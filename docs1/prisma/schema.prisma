@@ -1,0 +1,512 @@
+// ============================================================================
+//  Prisma schema for the Jintaihong website
+//  File: docs1/prisma/schema.prisma
+//
+//  IMPORTANT: docs1/schema.sql is the source of truth. It also installs the
+//  required extensions, triggers and the inquiry-reference function, which
+//  Prisma cannot express. Use this file for a typed client / introspection:
+//
+//      npx prisma generate --schema docs1/prisma/schema.prisma
+//      npx prisma validate --schema docs1/prisma/schema.prisma
+//
+//  Do NOT run `prisma migrate` or `prisma db push` against a database created
+//  by schema.sql; they would try to re-create existing objects.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums (must match the PostgreSQL types in schema.sql)
+// ---------------------------------------------------------------------------
+
+enum AdminRole {
+  SUPER_ADMIN @map("super_admin")
+  EDITOR      @map("editor")
+  SALES       @map("sales")
+
+  @@map("admin_role")
+}
+
+enum MediaKind {
+  IMAGE    @map("image")
+  DOCUMENT @map("document")
+  VIDEO    @map("video")
+  OTHER    @map("other")
+
+  @@map("media_kind")
+}
+
+enum PublishStatus {
+  DRAFT     @map("draft")
+  PUBLISHED @map("published")
+  ARCHIVED  @map("archived")
+
+  @@map("publish_status")
+}
+
+enum InquiryStatus {
+  NEW         @map("new")
+  IN_PROGRESS @map("in_progress")
+  QUOTED      @map("quoted")
+  WON         @map("won")
+  LOST        @map("lost")
+  ARCHIVED    @map("archived")
+
+  @@map("inquiry_status")
+}
+
+enum InquirySource {
+  QUOTE_FORM   @map("quote_form")
+  CONTACT_FORM @map("contact_form")
+  MANUAL       @map("manual")
+  EMAIL        @map("email")
+
+  @@map("inquiry_source")
+}
+
+enum SubscriberStatus {
+  PENDING      @map("pending")
+  SUBSCRIBED   @map("subscribed")
+  UNSUBSCRIBED @map("unsubscribed")
+  BOUNCED      @map("bounced")
+
+  @@map("subscriber_status")
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+model AdminUser {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String    @unique @db.Citext
+  passwordHash String    @map("password_hash")
+  name         String
+  role         AdminRole @default(EDITOR)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  sessions  AdminSession[]
+  media     MediaAsset[]   @relation("MediaUploader")
+  inquiries Inquiry[]      @relation("InquiryAssignee")
+  notes     InquiryNote[]
+  auditLogs AuditLog[]
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+  ip        String?   @db.Inet
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Media
+// ---------------------------------------------------------------------------
+
+model MediaAsset {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind       MediaKind @default(IMAGE)
+  name       String
+  url        String
+  storageKey String?   @unique @map("storage_key")
+  mimeType   String?   @map("mime_type")
+  sizeBytes  BigInt?   @map("size_bytes")
+  width      Int?
+  height     Int?
+  altText    String?   @map("alt_text")
+  caption    String?
+  folder     String    @default("general")
+  uploadedBy String?   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  uploader                 AdminUser?                @relation("MediaUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  siteLogos                SiteSettings[]            @relation("SiteLogo")
+  heroBackgrounds          HomepageConfig[]          @relation("HeroBackground")
+  mobileHeroBackgrounds    HomepageConfig[]          @relation("MobileHeroBackground")
+  aboutImages              HomepageConfig[]          @relation("AboutImage")
+  ctaImages                HomepageConfig[]          @relation("CtaImage")
+  categoryCovers           ProductCategory[]         @relation("CategoryImage")
+  productCovers            Product[]                 @relation("ProductCover")
+  capabilityCovers         Capability[]              @relation("CapabilityImage")
+  caseStudyCovers          CaseStudy[]               @relation("CaseStudyCover")
+  pageSeoOgImages          PageSeo[]                 @relation("PageOgImage")
+  productImages            ProductImage[]
+  inquiryAttachments       InquiryAttachment[]
+  homepageCategoryImages   HomepageCategoryImage[]
+  homepageCapabilityImages HomepageCapabilityImage[]
+
+  @@index([folder, createdAt(sort: Desc)])
+  @@map("media_assets")
+}
+
+// ---------------------------------------------------------------------------
+// Locales, settings, SEO, translations
+// ---------------------------------------------------------------------------
+
+model Locale {
+  code       String  @id @db.VarChar(5)
+  name       String
+  nativeName String  @map("native_name")
+  isRtl      Boolean @default(false) @map("is_rtl")
+  isActive   Boolean @default(true) @map("is_active")
+  sortOrder  Int     @default(0) @map("sort_order") @db.SmallInt
+
+  siteSettings SiteSettings[]
+  translations Translation[]
+
+  @@map("locales")
+}
+
+model SiteSettings {
+  id             Int      @id @default(1) @db.SmallInt
+  companyNameEn  String   @map("company_name_en")
+  companyNameCn  String?  @map("company_name_cn")
+  shortName      String?  @map("short_name")
+  tagline        String?
+  description    String?
+  email          String?  @db.Citext
+  phone          String?
+  whatsapp       String?
+  wechat         String?
+  addressEn      String?  @map("address_en")
+  addressCn      String?  @map("address_cn")
+  businessHours  String?  @map("business_hours")
+  logoMediaId    String?  @map("logo_media_id") @db.Uuid
+  defaultLocale  String   @default("en") @map("default_locale") @db.VarChar(5)
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  socialLinks    Json     @default("{}") @map("social_links") @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  logo             MediaAsset? @relation("SiteLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  defaultLocaleRef Locale      @relation(fields: [defaultLocale], references: [code])
+
+  @@map("site_settings")
+}
+
+model PageSeo {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  path        String   @unique
+  title       String?
+  description String?
+  ogMediaId   String?  @map("og_media_id") @db.Uuid
+  noIndex     Boolean  @default(false) @map("no_index")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  ogImage MediaAsset? @relation("PageOgImage", fields: [ogMediaId], references: [id], onDelete: SetNull)
+
+  @@map("page_seo")
+}
+
+model Translation {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locale    String   @db.VarChar(5)
+  namespace String   @default("common")
+  key       String
+  value     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  localeRef Locale @relation(fields: [locale], references: [code], onDelete: Cascade)
+
+  @@unique([locale, namespace, key])
+  @@index([locale, namespace])
+  @@map("translations")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue
+// ---------------------------------------------------------------------------
+
+model ProductCategory {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug           String   @unique
+  name           String
+  description    String?
+  imageMediaId   String?  @map("image_media_id") @db.Uuid
+  featured       Boolean  @default(false)
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  image         MediaAsset?            @relation("CategoryImage", fields: [imageMediaId], references: [id], onDelete: SetNull)
+  products      Product[]
+  homepageImage HomepageCategoryImage?
+  inquiries     Inquiry[]
+
+  @@index([isActive, sortOrder])
+  @@map("product_categories")
+}
+
+model Product {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId       String   @map("category_id") @db.Uuid
+  slug             String   @unique
+  name             String
+  shortDescription String?  @map("short_description")
+  description      String?
+  coverMediaId     String?  @map("cover_media_id") @db.Uuid
+  moq              String?
+  leadTime         String?  @map("lead_time")
+  specs            Json     @default("{}") @db.JsonB
+  featured         Boolean  @default(false)
+  isActive         Boolean  @default(true) @map("is_active")
+  sortOrder        Int      @default(0) @map("sort_order")
+  seoTitle         String?  @map("seo_title")
+  seoDescription   String?  @map("seo_description")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  cover    MediaAsset?     @relation("ProductCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  images   ProductImage[]
+
+  @@index([categoryId, isActive, sortOrder])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  mediaId   String   @map("media_id") @db.Uuid
+  altText   String?  @map("alt_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  product Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  media   MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, mediaId])
+  @@index([productId, sortOrder])
+  @@map("product_images")
+}
+
+model Capability {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug         String   @unique
+  title        String
+  description  String?
+  imageMediaId String?  @map("image_media_id") @db.Uuid
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  image         MediaAsset?              @relation("CapabilityImage", fields: [imageMediaId], references: [id], onDelete: SetNull)
+  homepageImage HomepageCapabilityImage?
+
+  @@map("capabilities")
+}
+
+model CaseStudy {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug           String        @unique
+  title          String
+  clientName     String?       @map("client_name")
+  industry       String?
+  summary        String?
+  content        String?
+  coverMediaId   String?       @map("cover_media_id") @db.Uuid
+  status         PublishStatus @default(DRAFT)
+  publishedAt    DateTime?     @map("published_at") @db.Timestamptz
+  featured       Boolean       @default(false)
+  sortOrder      Int           @default(0) @map("sort_order")
+  seoTitle       String?       @map("seo_title")
+  seoDescription String?       @map("seo_description")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  cover MediaAsset? @relation("CaseStudyCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@map("case_studies")
+}
+
+// ---------------------------------------------------------------------------
+// Homepage
+// ---------------------------------------------------------------------------
+
+model HomepageConfig {
+  id                      Int      @id @default(1) @db.SmallInt
+  heroEyebrow             String   @default("PAPER PACKAGING & PRINTING MANUFACTURER") @map("hero_eyebrow")
+  heroTitle               String   @default("Custom Paper Packaging") @map("hero_title")
+  heroSubtitle            String?  @map("hero_subtitle")
+  heroBackgroundMediaId   String?  @map("hero_background_media_id") @db.Uuid
+  heroBackgroundPosition  String   @default("center center") @map("hero_background_position")
+  mobileBackgroundMediaId String?  @map("mobile_background_media_id") @db.Uuid
+  aboutMediaId            String?  @map("about_media_id") @db.Uuid
+  ctaMediaId              String?  @map("cta_media_id") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  heroBackground   MediaAsset? @relation("HeroBackground", fields: [heroBackgroundMediaId], references: [id], onDelete: SetNull)
+  mobileBackground MediaAsset? @relation("MobileHeroBackground", fields: [mobileBackgroundMediaId], references: [id], onDelete: SetNull)
+  aboutImage       MediaAsset? @relation("AboutImage", fields: [aboutMediaId], references: [id], onDelete: SetNull)
+  ctaImage         MediaAsset? @relation("CtaImage", fields: [ctaMediaId], references: [id], onDelete: SetNull)
+
+  @@map("homepage_config")
+}
+
+model HomepageCategoryImage {
+  categoryId String   @id @map("category_id") @db.Uuid
+  mediaId    String   @map("media_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  media    MediaAsset      @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_category_images")
+}
+
+model HomepageCapabilityImage {
+  capabilityId String   @id @map("capability_id") @db.Uuid
+  mediaId      String   @map("media_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  capability Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  media      MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@map("homepage_capability_images")
+}
+
+// ---------------------------------------------------------------------------
+// Inquiries
+// ---------------------------------------------------------------------------
+
+model Inquiry {
+  id                     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referenceCode          String        @unique @default(dbgenerated("next_inquiry_reference()")) @map("reference_code")
+  fullName               String        @map("full_name")
+  companyName            String        @map("company_name")
+  email                  String        @db.Citext
+  phone                  String?
+  country                String?
+  productCategoryId      String?       @map("product_category_id") @db.Uuid
+  productType            String?       @map("product_type")
+  quantity               String?
+  packagingSize          String?       @map("packaging_size")
+  material               String?
+  printingRequirements   String?       @map("printing_requirements")
+  additionalRequirements String?       @map("additional_requirements")
+  source                 InquirySource @default(QUOTE_FORM)
+  sourcePage             String?       @map("source_page")
+  referrer               String?
+  status                 InquiryStatus @default(NEW)
+  assignedTo             String?       @map("assigned_to") @db.Uuid
+  ip                     String?       @db.Inet
+  userAgent              String?       @map("user_agent")
+  firstRespondedAt       DateTime?     @map("first_responded_at") @db.Timestamptz
+  closedAt               DateTime?     @map("closed_at") @db.Timestamptz
+  createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  category    ProductCategory?    @relation(fields: [productCategoryId], references: [id], onDelete: SetNull)
+  assignee    AdminUser?          @relation("InquiryAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+  notes       InquiryNote[]
+  attachments InquiryAttachment[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@index([email])
+  @@index([productCategoryId])
+  @@index([assignedTo])
+  @@map("inquiries")
+}
+
+model InquiryNote {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inquiryId  String   @map("inquiry_id") @db.Uuid
+  authorId   String?  @map("author_id") @db.Uuid
+  body       String
+  isInternal Boolean  @default(true) @map("is_internal")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  inquiry Inquiry    @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author  AdminUser? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([inquiryId, createdAt(sort: Desc)])
+  @@map("inquiry_notes")
+}
+
+model InquiryAttachment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inquiryId String   @map("inquiry_id") @db.Uuid
+  mediaId   String   @map("media_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  inquiry Inquiry    @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  media   MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@unique([inquiryId, mediaId])
+  @@index([inquiryId])
+  @@map("inquiry_attachments")
+}
+
+// ---------------------------------------------------------------------------
+// Newsletter
+// ---------------------------------------------------------------------------
+
+model NewsletterSubscriber {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email          String           @unique @db.Citext
+  status         SubscriberStatus @default(PENDING)
+  source         String           @default("footer")
+  consentIp      String?          @map("consent_ip") @db.Inet
+  confirmedAt    DateTime?        @map("confirmed_at") @db.Timestamptz
+  unsubscribedAt DateTime?        @map("unsubscribed_at") @db.Timestamptz
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("newsletter_subscribers")
+}
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  changes    Json?    @db.JsonB
+  ip         String?  @db.Inet
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actor AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

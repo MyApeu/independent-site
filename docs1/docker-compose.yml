@@ -1,0 +1,40 @@
+# ============================================================================
+#  PostgreSQL 16 for the Jintaihong website
+#  File: docs1/docker-compose.yml
+#
+#  Start:   docker compose up -d
+#  Logs:    docker compose logs -f db
+#  Stop:    docker compose down          (data volume is kept)
+#  Wipe:    docker compose down -v       (DESTROYS all data)
+#
+#  schema.sql and seed.sql are mounted into /docker-entrypoint-initdb.d and
+#  run automatically ONLY when the data volume is empty (first start).
+# ============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: jth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jintaihong}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in docs1/.env}
+      POSTGRES_DB: ${POSTGRES_DB:-jintaihong}
+      TZ: ${TZ:-Asia/Shanghai}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - jth_pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  jth_pgdata:
+    name: jth_pgdata
