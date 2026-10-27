@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Image, Home, Package, FolderTree, FileText, MessageSquare, LogOut } from 'lucide-react'
+import { LayoutDashboard, Image, Home, Package, FolderTree, FileText, MessageSquare, LogOut, RefreshCw } from 'lucide-react'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
@@ -7,6 +7,26 @@ export default function AdminLayout() {
   const logout = () => {
     localStorage.removeItem('jth_admin_auth')
     navigate('/admin/login')
+  }
+
+  const clearCache = async () => {
+    if (!window.confirm('确定要清除缓存吗？页面将自动重新加载。')) return
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((key) => caches.delete(key)))
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(registrations.map((registration) => registration.unregister()))
+      }
+      sessionStorage.clear()
+    } catch {
+      // ignore cache API errors
+    }
+    const url = new URL(window.location.href)
+    url.searchParams.set('_t', Date.now().toString())
+    window.location.replace(url.toString())
   }
 
   const menuItems = [
@@ -48,7 +68,11 @@ export default function AdminLayout() {
             })}
           </ul>
         </nav>
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-white/10 space-y-1">
+          <button onClick={clearCache} className="flex items-center gap-3 px-3 py-2 w-full hover:bg-white/5 transition-colors text-gray-400 hover:text-white">
+            <RefreshCw size={18} />
+            <span className="text-sm">清除缓存</span>
+          </button>
           <button onClick={logout} className="flex items-center gap-3 px-3 py-2 w-full hover:bg-white/5 transition-colors text-gray-400 hover:text-white">
             <LogOut size={18} />
             <span className="text-sm">退出登录</span>
