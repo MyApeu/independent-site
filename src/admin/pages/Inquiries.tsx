@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, X, Trash2, Paperclip } from 'lucide-react'
+import { Search, Trash2, Paperclip, RefreshCw, Mail, Phone, Building2, Globe } from 'lucide-react'
 import { api, type Inquiry } from '../../lib/api'
+import {
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Modal,
+  PageHeader,
+  inputClass,
+  tableClass,
+  tdClass,
+  thClass,
+  theadClass,
+} from '../components/ui'
 
 const statusLabels: Record<string, string> = {
   pending: '待处理',
@@ -10,10 +23,10 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusStyles: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  contacted: 'bg-blue-100 text-blue-800',
-  quoted: 'bg-purple-100 text-purple-800',
-  closed: 'bg-gray-100 text-gray-600',
+  pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  contacted: 'bg-blue-50 text-blue-700 border-blue-200',
+  quoted: 'bg-purple-50 text-purple-700 border-purple-200',
+  closed: 'bg-gray-100 text-gray-600 border-gray-200',
 }
 
 export default function AdminInquiries() {
@@ -100,155 +113,170 @@ export default function AdminInquiries() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">询盘管理</h1>
-          <p className="text-gray-600">管理来自报价表单的询盘</p>
-        </div>
-        <button onClick={() => void load()} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-sm">刷新</button>
-      </div>
+      <PageHeader
+        title="询盘管理"
+        description="查看和处理来自报价表单的客户询盘"
+        actions={
+          <Button variant="secondary" onClick={() => void load()}>
+            <RefreshCw size={16} />
+            刷新
+          </Button>
+        }
+      />
 
-      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
+      {error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-      <div className="bg-white border border-gray-200 p-4 mb-4">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="flex-1 relative">
+      <Card className="mb-4 p-4">
+        <div className="flex flex-col gap-3 md:flex-row">
+          <div className="relative flex-1">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="搜索姓名、公司、邮箱、电话..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300"
+              className={`${inputClass} pl-10`}
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300"
-          >
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={`${inputClass} md:w-40`}>
             <option value="all">全部状态</option>
-            <option value="pending">待处理</option>
-            <option value="contacted">已联系</option>
-            <option value="quoted">已报价</option>
-            <option value="closed">已关闭</option>
+            {Object.entries(statusLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300"
-          />
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 overflow-x-auto">
-        {loading ? (
-          <div className="p-12 text-center text-gray-500">加载中...</div>
-        ) : filteredInquiries.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            {inquiries.length === 0 ? '暂无询盘。来自报价表单的询盘将显示在这里。' : '没有符合筛选条件的询盘。'}
+          <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className={`${inputClass} md:w-44`} />
+          <div className="flex items-center text-sm text-gray-500 md:px-2">
+            共 <span className="mx-1 font-semibold text-gray-900">{filteredInquiries.length}</span> 条
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        {loading ? (
+          <EmptyState>加载中...</EmptyState>
+        ) : filteredInquiries.length === 0 ? (
+          <EmptyState>{inquiries.length === 0 ? '暂无询盘。来自报价表单的询盘将显示在这里。' : '没有符合筛选条件的询盘。'}</EmptyState>
         ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left p-3 text-sm">姓名</th>
-                <th className="text-left p-3 text-sm">公司</th>
-                <th className="text-left p-3 text-sm">邮箱</th>
-                <th className="text-left p-3 text-sm">电话</th>
-                <th className="text-left p-3 text-sm">产品类型</th>
-                <th className="text-left p-3 text-sm">日期</th>
-                <th className="text-left p-3 text-sm">状态</th>
-                <th className="text-left p-3 text-sm">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInquiries.map((inquiry) => (
-                <tr key={inquiry.id} className="border-b last:border-0">
-                  <td className="p-3 text-sm">{inquiry.fullName}</td>
-                  <td className="p-3 text-sm">{inquiry.companyName || '-'}</td>
-                  <td className="p-3 text-sm">{inquiry.businessEmail}</td>
-                  <td className="p-3 text-sm">{inquiry.phone || '-'}</td>
-                  <td className="p-3 text-sm">{inquiry.productType || '-'}</td>
-                  <td className="p-3 text-sm">{new Date(inquiry.createdAt).toLocaleDateString('zh-CN')}</td>
-                  <td className="p-3 text-sm">
-                    <select
-                      value={inquiry.status}
-                      onChange={(e) => void updateStatus(inquiry, e.target.value)}
-                      className={`px-2 py-1 text-xs border-0 ${statusStyles[inquiry.status] || 'bg-gray-100 text-gray-600'}`}
-                    >
-                      {Object.entries(statusLabels).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-3 text-sm space-x-2 whitespace-nowrap">
-                    <button onClick={() => openDetail(inquiry)} className="text-brand-orange hover:underline">查看详情</button>
-                    <button onClick={() => void remove(inquiry)} className="text-red-600 hover:underline">删除</button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className={tableClass}>
+              <thead className={theadClass}>
+                <tr>
+                  <th className={thClass}>客户</th>
+                  <th className={thClass}>联系方式</th>
+                  <th className={thClass}>产品类型</th>
+                  <th className={thClass}>日期</th>
+                  <th className={thClass}>状态</th>
+                  <th className={`${thClass} text-right`}>操作</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredInquiries.map((inquiry) => (
+                  <tr key={inquiry.id} className="hover:bg-gray-50/60">
+                    <td className={tdClass}>
+                      <div className="font-medium text-gray-900">{inquiry.fullName}</div>
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <Building2 size={12} />
+                        {inquiry.companyName || '未填写公司'}
+                      </div>
+                    </td>
+                    <td className={tdClass}>
+                      <div className="flex items-center gap-1 text-gray-700">
+                        <Mail size={12} className="text-gray-400" />
+                        {inquiry.businessEmail}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <Phone size={12} />
+                        {inquiry.phone || '未填写电话'}
+                      </div>
+                    </td>
+                    <td className={tdClass}>{inquiry.productType || '-'}</td>
+                    <td className={`${tdClass} whitespace-nowrap`}>{new Date(inquiry.createdAt).toLocaleDateString('zh-CN')}</td>
+                    <td className={tdClass}>
+                      <select
+                        value={inquiry.status}
+                        onChange={(e) => void updateStatus(inquiry, e.target.value)}
+                        className={`rounded-full border px-2 py-1 text-xs font-medium ${statusStyles[inquiry.status] || 'border-gray-200 bg-gray-100 text-gray-600'}`}
+                      >
+                        {Object.entries(statusLabels).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className={`${tdClass} text-right`}>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => openDetail(inquiry)}>查看详情</Button>
+                        <Button variant="danger" size="sm" onClick={() => void remove(inquiry)} aria-label="删除询盘">
+                          <Trash2 size={12} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </Card>
 
       {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b">
-              <div>
-                <h3 className="text-lg font-semibold">{selected.fullName}</h3>
-                <p className="text-sm text-gray-500">{new Date(selected.createdAt).toLocaleString('zh-CN')}</p>
-              </div>
-              <button onClick={() => setSelected(null)}><X size={20} /></button>
+        <Modal
+          title={selected.fullName}
+          subtitle={new Date(selected.createdAt).toLocaleString('zh-CN')}
+          onClose={() => setSelected(null)}
+          footer={
+            <>
+              <Button variant="danger" onClick={() => void remove(selected)}>
+                <Trash2 size={14} /> 删除询盘
+              </Button>
+              <Button onClick={() => void saveNote()} disabled={savingNote}>
+                {savingNote ? '保存中...' : '保存备注'}
+              </Button>
+            </>
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Mail size={14} className="text-gray-400" /> {selected.businessEmail}
             </div>
-            <div className="p-5 space-y-4">
-              <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                <div><span className="text-gray-500">公司：</span>{selected.companyName || '-'}</div>
-                <div><span className="text-gray-500">邮箱：</span>{selected.businessEmail}</div>
-                <div><span className="text-gray-500">电话：</span>{selected.phone || '-'}</div>
-                <div><span className="text-gray-500">国家/地区：</span>{selected.country || '-'}</div>
-                <div><span className="text-gray-500">产品类型：</span>{selected.productType || '-'}</div>
-                <div><span className="text-gray-500">数量：</span>{selected.quantity || '-'}</div>
-                <div><span className="text-gray-500">尺寸：</span>{selected.packagingSize || '-'}</div>
-                <div><span className="text-gray-500">材质：</span>{selected.material || '-'}</div>
-                <div className="sm:col-span-2"><span className="text-gray-500">印刷要求：</span>{selected.printingRequirements || '-'}</div>
-                <div className="sm:col-span-2"><span className="text-gray-500">其他要求：</span>{selected.additionalRequirements || '-'}</div>
-              </div>
-
-              {selected.attachments.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">附件</h4>
-                  <ul className="space-y-1">
-                    {selected.attachments.map((file) => (
-                      <li key={file.url}>
-                        <a href={file.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-brand-orange hover:underline">
-                          <Paperclip size={14} /> {file.name}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium mb-1">内部备注</label>
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300" />
-                <button onClick={() => void saveNote()} disabled={savingNote} className="mt-2 px-4 py-2 bg-brand-orange text-white text-sm hover:bg-[#e6741a] disabled:opacity-50">
-                  {savingNote ? '保存中...' : '保存备注'}
-                </button>
-              </div>
-
-              <div className="flex gap-2 pt-2 border-t">
-                <button onClick={() => void remove(selected)} className="px-3 py-2 bg-red-50 text-red-600 text-sm hover:bg-red-100 flex items-center gap-1">
-                  <Trash2 size={14} /> 删除询盘
-                </button>
-              </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Phone size={14} className="text-gray-400" /> {selected.phone || '未填写'}
             </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Building2 size={14} className="text-gray-400" /> {selected.companyName || '未填写公司'}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Globe size={14} className="text-gray-400" /> {selected.country || '未填写国家'}
+            </div>
+
+            <div className="sm:col-span-2 grid gap-3 rounded-lg bg-gray-50 p-4 text-sm sm:grid-cols-2">
+              <div><span className="text-gray-500">产品类型：</span>{selected.productType || '-'}</div>
+              <div><span className="text-gray-500">数量：</span>{selected.quantity || '-'}</div>
+              <div><span className="text-gray-500">尺寸：</span>{selected.packagingSize || '-'}</div>
+              <div><span className="text-gray-500">材质：</span>{selected.material || '-'}</div>
+              <div className="sm:col-span-2"><span className="text-gray-500">印刷要求：</span>{selected.printingRequirements || '-'}</div>
+              <div className="sm:col-span-2"><span className="text-gray-500">其他要求：</span>{selected.additionalRequirements || '-'}</div>
+            </div>
+
+            {selected.attachments.length > 0 && (
+              <div className="sm:col-span-2">
+                <h4 className="mb-2 text-sm font-semibold text-gray-900">附件</h4>
+                <ul className="space-y-1">
+                  {selected.attachments.map((file) => (
+                    <li key={file.url}>
+                      <a href={file.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-brand-orange hover:underline">
+                        <Paperclip size={14} /> {file.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Field label="内部备注" className="sm:col-span-2">
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} className={inputClass} placeholder="记录跟进情况..." />
+            </Field>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

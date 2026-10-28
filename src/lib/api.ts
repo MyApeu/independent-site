@@ -106,7 +106,10 @@ async function request<T>(path: string, init: RequestInit = {}, auth = false): P
     } catch {
       // ignore json parse errors
     }
-    if (res.status === 401) clearToken()
+    if (res.status === 401) {
+      clearToken()
+      window.dispatchEvent(new Event('jth:unauthorized'))
+    }
     throw new Error(message)
   }
   if (res.status === 204) return undefined as T

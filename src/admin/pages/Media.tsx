@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { Upload, Trash2, Copy } from 'lucide-react'
 import { useCms } from '../../context/CmsContext'
+import { Button, Card, EmptyState, PageHeader } from '../components/ui'
+
+function formatSize(bytes: number) {
+  if (!bytes) return '-'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 export default function AdminMedia() {
   const { media, uploadMedia, removeMedia } = useCms()
@@ -37,45 +45,45 @@ export default function AdminMedia() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">媒体库</h1>
-          <p className="text-gray-600">上传和管理网站所有图片</p>
-        </div>
-        <label className="px-4 py-2 bg-brand-orange text-white hover:bg-[#e6741a] cursor-pointer flex items-center gap-2">
-          <Upload size={18} />
-          {uploading ? '上传中...' : '上传图片'}
-          <input type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
-        </label>
-      </div>
-      <div className="bg-white border border-gray-200">
+      <PageHeader
+        title="媒体库"
+        description="上传和管理网站所有图片，复制 URL 后可在首页或产品中使用"
+        actions={
+          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#e6741a]">
+            <Upload size={16} />
+            {uploading ? '上传中...' : '上传图片'}
+            <input type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
+          </label>
+        }
+      />
+
+      <Card>
         {media.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            暂无上传的图片。点击“上传图片”开始使用。
-          </div>
+          <EmptyState>暂无上传的图片。点击右上角“上传图片”开始使用。</EmptyState>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+          <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {media.map((asset) => (
-              <div key={asset.id} className="border border-gray-200 group">
-                <div className="aspect-square overflow-hidden bg-gray-100">
-                  <img src={asset.url} alt={asset.alt} className="w-full h-full object-cover" />
+              <div key={asset.id} className="group overflow-hidden rounded-lg border border-gray-200 bg-white">
+                <div className="aspect-square overflow-hidden bg-gray-50">
+                  <img src={asset.url} alt={asset.alt} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 </div>
-                <div className="p-2">
-                  <p className="text-xs truncate mb-1">{asset.name}</p>
+                <div className="p-2.5">
+                  <p className="truncate text-xs font-medium text-gray-700" title={asset.name}>{asset.name}</p>
+                  <p className="mb-2 mt-0.5 text-[11px] text-gray-400">{formatSize(asset.size)}</p>
                   <div className="flex gap-1">
-                    <button onClick={() => copyUrl(asset.url)} className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 flex items-center justify-center gap-1">
-                      <Copy size={12} /> 复制
+                    <button onClick={() => copyUrl(asset.url)} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-gray-100 px-2 py-1.5 text-xs text-gray-700 transition-colors hover:bg-gray-200">
+                      <Copy size={12} /> 复制 URL
                     </button>
-                    <button onClick={() => remove(asset.id, asset.name)} className="px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100">
+                    <Button variant="danger" size="sm" onClick={() => remove(asset.id, asset.name)} aria-label="删除图片">
                       <Trash2 size={12} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

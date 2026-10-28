@@ -18,13 +18,13 @@ export const DEFAULT_HOMEPAGE = {
     'labels-sleeves': 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=1000&q=80',
     'other-custom-packaging': 'https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?w=1000&q=80',
   },
+  aboutTagline: 'ABOUT US',
+  aboutTitle: 'Shenzhen Jintaihong Packaging Products Co., Ltd.',
+  aboutDescription:
+    'We are a professional paper packaging manufacturer dedicated to providing high-quality custom packaging and printing services to global brands and importers.',
   aboutImage: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1000&q=80',
-  capabilityImages: {
-    Printing: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=1000&q=80',
-    'Die-Cutting': 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?w=1000&q=80',
-    'Post-Processing': 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1000&q=80',
-    'Quality Control': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1000&q=80',
-  },
+  ctaTitle: 'Turn Your Packaging Ideas into Reality',
+  ctaDescription: 'Contact us today to discuss your custom packaging project.',
   ctaImage: 'https://images.unsplash.com/photo-1607082349566-187342175e2f?w=1800&q=80',
 }
 

@@ -32,12 +32,15 @@ export default function AboutSection() {
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           <div className="lg:col-span-4">
-            <div className="text-brand-orange text-xs font-semibold tracking-[0.18em] mb-2">ABOUT US</div>
+            <div className="text-brand-orange text-xs font-semibold tracking-[0.18em] mb-2">
+              {homepage.aboutTagline || 'ABOUT US'}
+            </div>
             <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-bold mb-3 leading-tight">
-              Shenzhen Jintaihong Packaging Products Co., Ltd.
+              {homepage.aboutTitle || 'Shenzhen Jintaihong Packaging Products Co., Ltd.'}
             </h2>
             <p className="text-gray-300 mb-6 leading-relaxed">
-              We are a professional paper packaging manufacturer dedicated to providing high-quality custom packaging and printing services to global brands and importers.
+              {homepage.aboutDescription ||
+                'We are a professional paper packaging manufacturer dedicated to providing high-quality custom packaging and printing services to global brands and importers.'}
             </p>
             <Link to="/about" className="inline-flex items-center gap-2 bg-brand-orange hover:bg-[#e05f0c] px-6 py-3 rounded-lg transition-colors">
               Learn More <ArrowRight size={18} />

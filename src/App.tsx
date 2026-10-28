@@ -20,7 +20,7 @@ import { CmsProvider } from './context/CmsContext'
 import VisitTracker from './components/VisitTracker'
 
 function isAdmin() {
-  return localStorage.getItem('jth_admin_auth') === '1'
+  return localStorage.getItem('jth_admin_auth') === '1' && Boolean(localStorage.getItem('jth_admin_token'))
 }
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {

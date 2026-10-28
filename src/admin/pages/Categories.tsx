@@ -1,7 +1,21 @@
 import { useState } from 'react'
-import { Plus, Save, X } from 'lucide-react'
+import { Plus, Save, Trash2, Pencil } from 'lucide-react'
 import { useCms } from '../../context/CmsContext'
 import { api, type Category } from '../../lib/api'
+import {
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  ImagePreview,
+  Modal,
+  PageHeader,
+  inputClass,
+  tableClass,
+  tdClass,
+  thClass,
+  theadClass,
+} from '../components/ui'
 
 type FormState = {
   name: string
@@ -21,15 +35,26 @@ const emptyForm: FormState = {
   sortOrder: 0,
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+}
+
 export default function AdminCategories() {
   const { categories, refreshCategories } = useCms()
   const [editing, setEditing] = useState<{ mode: 'add' | 'edit'; id?: string } | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const openAdd = () => {
     setEditing({ mode: 'add' })
     setForm({ ...emptyForm, sortOrder: categories.length })
+    setError('')
   }
 
   const openEdit = (category: Category) => {
@@ -42,14 +67,16 @@ export default function AdminCategories() {
       featured: Boolean(category.featured),
       sortOrder: category.sortOrder ?? 0,
     })
+    setError('')
   }
 
   const save = async () => {
     if (!form.name.trim() || !form.slug.trim()) {
-      alert('名称和 slug 必填')
+      setError('名称和 slug 必填')
       return
     }
     setSaving(true)
+    setError('')
     try {
       if (editing?.mode === 'add') {
         await api.categories.create(form)
@@ -58,8 +85,8 @@ export default function AdminCategories() {
       }
       await refreshCategories()
       setEditing(null)
-    } catch (error) {
-      alert(error instanceof Error ? error.message : '保存失败')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败')
     } finally {
       setSaving(false)
     }
@@ -70,109 +97,123 @@ export default function AdminCategories() {
     try {
       await api.categories.remove(category.id)
       await refreshCategories()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : '删除失败')
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '删除失败')
     }
   }
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">分类管理</h1>
-          <p className="text-gray-600">管理产品分类（同步前台导航与产品页）</p>
-        </div>
-        <button onClick={openAdd} className="px-4 py-2 bg-brand-orange text-white hover:bg-[#e6741a] flex items-center gap-2">
-          <Plus size={18} />
-          添加分类
-        </button>
-      </div>
-      <div className="bg-white border border-gray-200 overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="text-left p-3 text-sm">图片</th>
-              <th className="text-left p-3 text-sm">名称</th>
-              <th className="text-left p-3 text-sm">Slug</th>
-              <th className="text-left p-3 text-sm">排序</th>
-              <th className="text-left p-3 text-sm">推荐</th>
-              <th className="text-right p-3 text-sm">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((category) => (
-              <tr key={category.id} className="border-b last:border-0">
-                <td className="p-3">
-                  {category.image ? (
-                    <img src={category.image} alt={category.name} className="w-16 h-12 object-cover border border-gray-200" />
-                  ) : (
-                    <span className="text-xs text-gray-400">无</span>
-                  )}
-                </td>
-                <td className="p-3">{category.name}</td>
-                <td className="p-3 text-gray-600">{category.slug}</td>
-                <td className="p-3 text-gray-600">{category.sortOrder ?? 0}</td>
-                <td className="p-3 text-gray-600">{category.featured ? '是' : '否'}</td>
-                <td className="p-3 text-right space-x-2">
-                  <button onClick={() => openEdit(category)} className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200">编辑</button>
-                  <button onClick={() => remove(category)} className="px-3 py-1 text-sm bg-red-50 text-red-600 hover:bg-red-100">删除</button>
-                </td>
-              </tr>
-            ))}
-            {categories.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-gray-500">暂无分类</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <PageHeader
+        title="分类管理"
+        description="分类会同步显示在前台导航和产品页面"
+        actions={
+          <Button onClick={openAdd}>
+            <Plus size={16} />
+            添加分类
+          </Button>
+        }
+      />
+
+      <Card>
+        {categories.length === 0 ? (
+          <EmptyState>暂无分类。点击右上角“添加分类”创建第一个分类。</EmptyState>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className={tableClass}>
+              <thead className={theadClass}>
+                <tr>
+                  <th className={thClass}>图片</th>
+                  <th className={thClass}>名称</th>
+                  <th className={thClass}>Slug</th>
+                  <th className={thClass}>排序</th>
+                  <th className={thClass}>首页推荐</th>
+                  <th className={`${thClass} text-right`}>操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {categories.map((category) => (
+                  <tr key={category.id} className="hover:bg-gray-50/60">
+                    <td className={tdClass}>
+                      <div className="w-20">
+                        <ImagePreview src={category.image} alt={category.name} ratio="aspect-[4/3]" />
+                      </div>
+                    </td>
+                    <td className={`${tdClass} font-medium text-gray-900`}>{category.name}</td>
+                    <td className={`${tdClass} text-gray-500`}>{category.slug}</td>
+                    <td className={tdClass}>{category.sortOrder ?? 0}</td>
+                    <td className={tdClass}>{category.featured ? '是' : '否'}</td>
+                    <td className={`${tdClass} text-right`}>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => openEdit(category)}>
+                          <Pencil size={12} /> 编辑
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => remove(category)}>
+                          <Trash2 size={12} /> 删除
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
 
       {editing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{editing.mode === 'add' ? '添加分类' : '编辑分类'}</h3>
-              <button onClick={() => setEditing(null)}><X size={20} /></button>
-            </div>
-            <div className="space-y-3 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">名称</label>
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Slug</label>
-                <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="w-full px-3 py-2 border border-gray-300" placeholder="paper-boxes" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">图片 URL</label>
-                <input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className="w-full px-3 py-2 border border-gray-300" placeholder="/uploads/xxx.jpg" />
-                {form.image && <img src={form.image} alt="" className="mt-2 w-full h-32 object-cover border border-gray-200" />}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">描述</label>
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-3 py-2 border border-gray-300" />
-              </div>
-              <div className="flex items-center gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-1">排序</label>
-                  <input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} className="w-24 px-3 py-2 border border-gray-300" />
-                </div>
-                <label className="flex items-center gap-2 mt-5 text-sm">
-                  <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
-                  首页推荐
-                </label>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={save} disabled={saving} className="px-4 py-2 bg-brand-orange text-white hover:bg-[#e6741a] flex items-center gap-2 disabled:opacity-50">
+        <Modal
+          title={editing.mode === 'add' ? '添加分类' : '编辑分类'}
+          subtitle="图片建议使用 4:3 比例，显示效果最佳"
+          onClose={() => setEditing(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setEditing(null)}>取消</Button>
+              <Button onClick={save} disabled={saving}>
                 <Save size={16} />
                 {saving ? '保存中...' : '保存'}
-              </button>
-              <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200">取消</button>
+              </Button>
+            </>
+          }
+        >
+          <div className="grid gap-4">
+            {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="名称">
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} placeholder="例如：Paper Boxes" />
+              </Field>
+              <Field label="Slug">
+                <div className="flex gap-2">
+                  <input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className={inputClass} placeholder="paper-boxes" />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setForm({ ...form, slug: slugify(form.name) })}
+                    type="button"
+                  >
+                    生成
+                  </Button>
+                </div>
+              </Field>
+            </div>
+            <Field label="图片 URL" hint="可从媒体库复制图片链接粘贴到这里">
+              <input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} className={inputClass} placeholder="/uploads/xxx.jpg" />
+            </Field>
+            {form.image && <ImagePreview src={form.image} alt={form.name} ratio="aspect-[4/3]" />}
+            <Field label="描述">
+              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className={inputClass} />
+            </Field>
+            <div className="flex flex-wrap items-end gap-6">
+              <Field label="排序" className="w-24">
+                <input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} className={inputClass} />
+              </Field>
+              <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} className="h-4 w-4 accent-brand-orange" />
+                首页推荐
+              </label>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
