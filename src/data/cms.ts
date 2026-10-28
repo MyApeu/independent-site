@@ -25,10 +25,22 @@ export type HomepageConfig = {
   aboutImage: string
   capabilityImages: Record<string, string>
   ctaImage: string
+  [key: string]: any
+}
+
+export type FooterConfig = {
+  companyNameEn: string
+  companyNameCn: string
+  description: string
+  address: string
+  email: string
+  phone: string
+  [key: string]: any
 }
 
 const STORAGE_KEY_MEDIA = 'jth_media'
 const STORAGE_KEY_HOMEPAGE = 'jth_homepage'
+const STORAGE_KEY_FOOTER = 'jth_footer'
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -100,5 +112,21 @@ export const homepageStore = {
   },
   save(config: HomepageConfig) {
     save(STORAGE_KEY_HOMEPAGE, config)
+  }
+}
+
+export const footerStore = {
+  get(): FooterConfig {
+    return load<FooterConfig>(STORAGE_KEY_FOOTER, {
+      companyNameEn: 'Shenzhen Jintaihong Packaging Products Co., Ltd.',
+      companyNameCn: '深圳市金泰鸿包装制品有限公司',
+      description: 'Professional custom paper packaging and printing manufacturer serving global brands and importers.',
+      address: '[TO BE FILLED - Factory Address]',
+      email: '[TO BE FILLED - Email]',
+      phone: '[TO BE FILLED - Phone]',
+    })
+  },
+  save(config: FooterConfig) {
+    save(STORAGE_KEY_FOOTER, config)
   }
 }

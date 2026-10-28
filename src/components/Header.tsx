@@ -91,7 +91,6 @@ export default function Header() {
                 </div>
               )}
             </div>
-            <Link to="/capabilities" className="hover:text-brand-orange transition-colors">Capabilities</Link>
             <Link to="/about" className="hover:text-brand-orange transition-colors">About Us</Link>
             <Link to="/case-studies" className="hover:text-brand-orange transition-colors">Case Studies</Link>
             <Link to="/contact" className="hover:text-brand-orange transition-colors">Contact</Link>
@@ -144,7 +143,6 @@ export default function Header() {
             <nav className="flex flex-col gap-3">
               <Link to="/" className="hover:text-brand-orange transition-colors" onClick={() => setMobileMenuOpen(false)}>Home</Link>
               <Link to="/products" className="hover:text-brand-orange transition-colors" onClick={() => setMobileMenuOpen(false)}>Products</Link>
-              <Link to="/capabilities" className="hover:text-brand-orange transition-colors" onClick={() => setMobileMenuOpen(false)}>Capabilities</Link>
               <Link to="/about" className="hover:text-brand-orange transition-colors" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
               <Link to="/case-studies" className="hover:text-brand-orange transition-colors" onClick={() => setMobileMenuOpen(false)}>Case Studies</Link>
               <Link to="/contact" className="hover:text-brand-orange transition-colors" onClick={() => setMobileMenuOpen(false)}>Contact</Link>

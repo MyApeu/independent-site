@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { useCms } from '../context/CmsContext'
 
 const capabilities = [
@@ -38,9 +37,8 @@ export default function CapabilitiesSection() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {capabilities.map((cap, index) => (
-            <Link
+            <div
               key={index}
-              to="/capabilities"
               className="group bg-white overflow-hidden border border-gray-200"
             >
               <div className="aspect-[16/10] overflow-hidden">
@@ -54,7 +52,7 @@ export default function CapabilitiesSection() {
                 <h3 className="font-semibold text-base mb-1 font-serif">{cap.title}</h3>
                 <p className="text-sm text-gray-600">{cap.description}</p>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

@@ -5,7 +5,6 @@ import Home from './pages/Home'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import About from './pages/About'
-import Capabilities from './pages/Capabilities'
 import CaseStudies from './pages/CaseStudies'
 import Contact from './pages/Contact'
 import RequestQuote from './pages/RequestQuote'
@@ -47,7 +46,6 @@ export default function App() {
           <Route path="/products" element={<PublicLayout><Products /></PublicLayout>} />
           <Route path="/products/:slug" element={<PublicLayout><ProductDetail /></PublicLayout>} />
           <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
-          <Route path="/capabilities" element={<PublicLayout><Capabilities /></PublicLayout>} />
           <Route path="/case-studies" element={<PublicLayout><CaseStudies /></PublicLayout>} />
           <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
           <Route path="/request-quote" element={<PublicLayout><RequestQuote /></PublicLayout>} />

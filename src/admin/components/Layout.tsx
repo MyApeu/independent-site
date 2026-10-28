@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Image, Home, Package, FolderTree, FileText, MessageSquare, LogOut, RefreshCw } from 'lucide-react'
+  import { LayoutDashboard, Image, Home, Package, FolderTree, MessageSquare, LogOut, RefreshCw } from 'lucide-react'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
@@ -35,7 +35,6 @@ export default function AdminLayout() {
     { icon: Home, label: '首页管理', path: '/admin/homepage' },
     { icon: Package, label: '产品管理', path: '/admin/products' },
     { icon: FolderTree, label: '分类管理', path: '/admin/categories' },
-    { icon: FileText, label: '工厂与能力', path: '/admin/factory' },
     { icon: MessageSquare, label: '询盘管理', path: '/admin/inquiries' },
   ]
 

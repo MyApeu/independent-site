@@ -30,7 +30,7 @@ export default function Hero() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-[62px] xl:text-[68px] font-bold leading-[1.06] tracking-tight text-white mb-6">
-            Custom Paper Packaging<br />
+            {homepage.heroTitle || 'Custom Paper Packaging'}<br />
             for <span className="text-brand-orange">Global Brands</span>
           </h1>
 

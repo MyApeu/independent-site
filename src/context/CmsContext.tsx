@@ -1,14 +1,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { mediaStore, homepageStore, type MediaAsset, type HomepageConfig } from '../data/cms'
+import { mediaStore, homepageStore, footerStore, type MediaAsset, type HomepageConfig, type FooterConfig } from '../data/cms'
 
 interface CmsContextType {
   media: MediaAsset[]
   homepage: HomepageConfig
+  footer: FooterConfig
   refreshMedia: () => void
   addMedia: (asset: MediaAsset) => void
   updateMedia: (id: string, updates: Partial<MediaAsset>) => void
   removeMedia: (id: string) => void
   saveHomepage: (config: HomepageConfig) => void
+  saveFooter: (config: FooterConfig) => void
 }
 
 const CmsContext = createContext<CmsContextType | undefined>(undefined)
@@ -16,6 +18,7 @@ const CmsContext = createContext<CmsContextType | undefined>(undefined)
 export function CmsProvider({ children }: { children: ReactNode }) {
   const [media, setMedia] = useState<MediaAsset[]>([])
   const [homepage, setHomepage] = useState<HomepageConfig>(homepageStore.get())
+  const [footer, setFooter] = useState<FooterConfig>(footerStore.get())
 
   useEffect(() => {
     setMedia(mediaStore.getAll())
@@ -38,9 +41,13 @@ export function CmsProvider({ children }: { children: ReactNode }) {
     homepageStore.save(config)
     setHomepage(config)
   }
+  const saveFooter = (config: FooterConfig) => {
+    footerStore.save(config)
+    setFooter(config)
+  }
 
   return (
-    <CmsContext.Provider value={{ media, homepage, refreshMedia, addMedia, updateMedia, removeMedia, saveHomepage }}>
+    <CmsContext.Provider value={{ media, homepage, footer, refreshMedia, addMedia, updateMedia, removeMedia, saveHomepage, saveFooter }}>
       {children}
     </CmsContext.Provider>
   )

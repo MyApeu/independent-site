@@ -3,6 +3,55 @@ import { Save } from 'lucide-react'
 import { useCms } from '../../context/CmsContext'
 import { productCategories } from '../../data/products'
 
+function FooterEdit() {
+  const { footer, saveFooter } = useCms()
+  const [config, setConfig] = useState(footer)
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = () => {
+    saveFooter(config)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">公司英文名</label>
+          <input value={config.companyNameEn} onChange={(e) => setConfig({ ...config, companyNameEn: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">公司中文名</label>
+          <input value={config.companyNameCn} onChange={(e) => setConfig({ ...config, companyNameCn: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">描述</label>
+        <textarea value={config.description} onChange={(e) => setConfig({ ...config, description: e.target.value })} className="w-full px-3 py-2 border border-gray-300" rows={2} />
+      </div>
+      <div className="grid md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">地址</label>
+          <input value={config.address} onChange={(e) => setConfig({ ...config, address: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">邮箱</label>
+          <input value={config.email} onChange={(e) => setConfig({ ...config, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">电话</label>
+          <input value={config.phone} onChange={(e) => setConfig({ ...config, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
+        </div>
+      </div>
+      <button onClick={handleSave} className="px-4 py-2 bg-brand-orange text-white hover:bg-[#e6741a] flex items-center gap-2">
+        <Save size={16} />
+        {saved ? '已保存！' : '保存页尾'}
+      </button>
+    </div>
+  )
+}
+
 export default function AdminHomepage() {
   const { homepage, saveHomepage, media } = useCms()
   const [config, setConfig] = useState(homepage)
@@ -34,6 +83,27 @@ export default function AdminHomepage() {
       <div className="space-y-6">
         <div className="bg-white border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4">首屏区域</h2>
+          <div className="grid md:grid-cols-2 gap-4 mb-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">首屏标题</label>
+              <input
+                value={config.heroTitle || ''}
+                onChange={(e) => setConfig({ ...config, heroTitle: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300"
+                placeholder="Custom Paper Packaging"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">首屏副标题</label>
+              <textarea
+                value={config.heroSubtitle || ''}
+                onChange={(e) => setConfig({ ...config, heroSubtitle: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300"
+                rows={3}
+                placeholder="副标题内容"
+              />
+            </div>
+          </div>
           <div className="grid md:grid-cols-2 gap-4 mb-6 pb-6 border-b border-gray-200">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">首屏背景图（全屏）</label>
@@ -44,7 +114,7 @@ export default function AdminHomepage() {
                 placeholder="/images/hero-packaging.jpg"
               />
               {config.heroBackgroundImage && (
-                <img src={config.heroBackgroundImage} alt="" className="w-full h-40 object-cover" />
+                <img src={config.heroBackgroundImage} alt="" className="w-full h-40 object-cover" style={{ objectPosition: config.heroBackgroundPosition || 'center center' }} />
               )}
             </div>
             <div>
@@ -126,6 +196,12 @@ export default function AdminHomepage() {
               <img src={config.ctaImage} alt="" className="w-full h-32 object-cover" />
             </div>
           </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4">页尾联系方式（修改界面）</h2>
+          <p className="text-sm text-gray-600 mb-4">修改页尾显示的公司信息</p>
+          <FooterEdit />
         </div>
 
         <div className="bg-white border border-gray-200 p-6">

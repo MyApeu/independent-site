@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Upload, X } from 'lucide-react'
 
 export default function RequestQuote() {
   const [formData, setFormData] = useState({
     fullName: '',
     companyName: '',
     businessEmail: '',
+    phone: '',
     country: '',
     productType: '',
     quantity: '',
@@ -14,6 +16,7 @@ export default function RequestQuote() {
     additionalRequirements: ''
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [files, setFiles] = useState<File[]>([])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +28,16 @@ export default function RequestQuote() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles([...files, ...Array.from(e.target.files)])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index))
   }
 
   return (
@@ -61,7 +74,7 @@ export default function RequestQuote() {
               />
             </div>
           </div>
-          <div className="grid sm:grid-cols-2 gap-6">
+          <div className="grid sm:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium mb-2">Business Email *</label>
               <input
@@ -69,6 +82,16 @@ export default function RequestQuote() {
                 name="businessEmail"
                 required
                 value={formData.businessEmail}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-brand-orange"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Phone Number</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-brand-orange"
               />
@@ -161,6 +184,37 @@ export default function RequestQuote() {
               className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-brand-orange"
               placeholder="Any other details about your project..."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Attachments</label>
+            <div className="border-2 border-dashed border-gray-300 p-6 text-center hover:border-brand-orange transition-colors">
+              <input
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-upload"
+                accept="image/*,.pdf,.doc,.docx,.ai,.eps"
+              />
+              <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                <Upload size={32} className="text-gray-400" />
+                <span className="text-sm text-gray-600">点击上传附件或拖拽文件到此处</span>
+                <span className="text-xs text-gray-500">支持图片、PDF、Word、AI、EPS格式</span>
+              </label>
+            </div>
+            {files.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200">
+                    <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                    <button type="button" onClick={() => removeFile(index)} className="text-red-500 hover:text-red-700">
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-4">
