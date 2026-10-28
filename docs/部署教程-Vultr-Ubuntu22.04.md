@@ -2,20 +2,28 @@
 
 本教程适合完全零基础的小白，带你一步步把「深圳市金泰鸿包装制品有限公司外贸官网」部署到 Vultr 云服务器上。
 
+本项目由两部分组成：
+
+| 部分 | 技术 | 作用 |
+|---|---|---|
+| 前端 | React + Vite | 网站页面和后台管理界面（构建后的 `dist/` 静态文件） |
+| 后端 | Express + Prisma + SQLite | 产品、分类、媒体、询盘、访问统计的数据接口（`server/` 目录） |
+
 ## 目录
 
 - [1. 准备工作](#1-准备工作)
 - [2. 在 Vultr 创建服务器](#2-在-vultr-创建服务器)
 - [3. 连接服务器](#3-连接服务器)
-- [tag: 4. 服务器基础配置](#4-服务器基础配置)
+- [4. 服务器基础配置](#4-服务器基础配置)
 - [5. 安装运行环境](#5-安装运行环境)
 - [6. 上传项目代码](#6-上传项目代码)
 - [7. 安装依赖并构建](#7-安装依赖并构建)
-- [8. 配置 Nginx 静态托管](#8-配置-nginx-静态托管)
-- [9. 配置域名和 HTTPS (可选但推荐](#9-配置域名和-https-可可选但推荐)
-- [10. 日常维护](#10-日常维护)
-- [11. 常见问题排查](#11-常见问题排查)
-- [12. 快速检查清单](#12-快速检查清单)
+- [8. 配置并启动后端 API](#8-配置并启动后端-api)
+- [9. 配置 Nginx](#9-配置-nginx)
+- [10. 配置域名和 HTTPS（可选但推荐）](#10-配置域名和-https可选但推荐)
+- [11. 日常维护](#11-日常维护)
+- [12. 常见问题排查](#12-常见问题排查)
+- [13. 快速检查清单](#13-快速检查清单)
 
 ## 1. 准备工作
 
@@ -25,7 +33,7 @@
 |---|---|---|
 | [Vultr 账号](https://www.vultr.com/) | 云服务器提供商 | 是 |
 | [SSH 工具](#3-连接服务器) | 用来连接服务器（Windows 推荐用 Tabby、Termius、PuTTY，Mac/Linux 自带终端即可） | 是 |
-| [域名](https://www.namesilo.com/、https://www.godaddy.com/) | 网站访问地址（不买域名也可以用 IP 访问） | 否（但推荐） |
+| [域名](https://www.namesilo.com/) | 网站访问地址（不买域名也可以用 IP 访问） | 否（但推荐） |
 | [本地项目代码](../) | 当前文件夹中的项目代码 | 是 |
 
 ## 2. 在 Vultr 创建服务器
@@ -44,11 +52,12 @@
 在 `Operating System` 中选择 `Ubuntu 22.04 LTS x64`
 
 ### 步骤 5：选择服务器配置
-对于本项目（纯静态网站），推荐配置：
+对于本项目（前端静态站 + 轻量 API + SQLite），推荐配置：
+
 | 配置 | 建议 | 说明 |
 |---|---|---|
-| `$5/月` | 足够用 | 最基础配置即可，1GB 内存 + 1CPU |
-| `$6/月` 或以上 | 更流畅 | 如果访问量较大可选更高配置 |
+| `$5/月` | 足够用 | 1GB 内存 + 1CPU，适合中小流量 |
+| `$6/月` 或以上 | 更流畅 | 如果访问量较大或需要构建时更快，可选更高配置 |
 
 ### 步骤 6：其他设置（可选）
 - `Server Hostname`：可以填 `jintaihong-web`
@@ -91,7 +100,7 @@ timedatectl status
 ```
 
 ### 配置防火墙（UFW）
-只开放必要的端口：SSH(22)、HTTP(80)、HTTPS(443)
+只开放必要的端口：SSH(22)、HTTP(80)、HTTPS(443)。后端 4000 端口不需要对外开放。
 
 ```bash
 ufw allow OpenSSH
@@ -116,7 +125,7 @@ systemctl start nginx
 测试：在浏览器访问 `http://YOUR_SERVER_IP`，如果看到 Nginx 默认欢迎页面，说明安装成功。
 
 ### 安装 Node.js（推荐用 NodeSource）
-本项目需要 Node.js 来构建，推荐安装 LTS 版本（v20）。
+本项目需要 Node.js 来构建前端和运行后端，推荐安装 LTS 版本（v20）。
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -131,11 +140,15 @@ npm -v
 
 应该显示 `v20.x.x` 和 `10.x.x` 之类的版本号。
 
-### 安装 Git
+### 安装 Git 和 PM2
 ```bash
 apt install git -y
 git --version
+npm install -g pm2
+pm2 -v
 ```
+
+PM2 用来让后端 API 在后台常驻运行，并在服务器重启后自动启动。
 
 ## 6. 上传项目代码
 
@@ -159,21 +172,22 @@ git clone https://你的仓库地址.git jintaihong
 3. 连接后，在远程端进入 `/var/www/`
 4. 在本地选择整个项目文件夹，上传到 `/var/www/jintaihong/`（如果文件夹不存在先创建）
 
-> 注意：上传时不要上传 `node_modules` 和 `dist` 文件夹，太大且没必要。到服务器上再安装和构建。
+> 注意：上传时不要上传 `node_modules`、`dist`、`server/node_modules` 文件夹，它们体积很大，到服务器上重新安装和构建即可。
+>
+> 也不要覆盖服务器上的 `server/.env`（后端密码配置）和 `server/prisma/dev.db`（数据库文件）。
 
 ## 7. 安装依赖并构建
 
+### 安装前端依赖并构建
 进入项目目录：
 ```bash
 cd /var/www/jintaihong
 ```
 
-安装依赖：
+安装依赖（如果下载慢，可以先执行 `npm config set registry https://registry.npmmirror.com`）：
 ```bash
 npm install
 ```
-
-这一步可能需要几分钟，耐心等待即可。
 
 构建项目（生成静态文件）：
 ```bash
@@ -189,7 +203,75 @@ ls -la dist/
 
 应该能看到 `index.html` 等文件。
 
-## 8. 配置 Nginx 静态托管
+### 安装后端依赖
+```bash
+cd /var/www/jintaihong/server
+npm install
+npx prisma generate
+npx prisma db push
+```
+
+- `prisma generate`：生成数据库客户端
+- `prisma db push`：按数据模型创建 SQLite 数据库（`server/prisma/dev.db`）
+
+### 初始化默认数据（分类、首页、页尾）
+```bash
+npm run seed
+```
+
+看到 `Seed completed` 即成功。
+
+## 8. 配置并启动后端 API
+
+### 创建环境变量文件
+```bash
+nano /var/www/jintaihong/server/.env
+```
+
+粘贴以下内容（**一定要把密码改成你自己的强密码**）：
+
+```env
+PORT=4000
+DATABASE_URL="file:./dev.db"
+ADMIN_PASSWORD="换成你的后台登录密码"
+```
+
+按 `Ctrl+X`，然后 `Y`，再 `Enter` 保存。
+
+> 后台登录密码就是这个 `ADMIN_PASSWORD`。修改后需要重启 API 才会生效。
+
+### 用 PM2 启动后端
+```bash
+cd /var/www/jintaihong/server
+pm2 start src/index.js --name jintaihong-api
+pm2 save
+pm2 startup
+```
+
+`pm2 startup` 会打印一行 `sudo env PATH=... pm2 startup systemd ...` 的命令，**把这行命令复制并执行一次**，这样服务器重启后 API 会自动启动。
+
+### 检查后端是否正常
+```bash
+curl http://127.0.0.1:4000/api/health
+```
+
+应返回：
+```json
+{"ok":true}
+```
+
+常用 PM2 命令：
+```bash
+pm2 status                 # 查看运行状态
+pm2 logs jintaihong-api    # 查看后端日志
+pm2 restart jintaihong-api # 重启后端
+```
+
+## 9. 配置 Nginx
+
+Nginx 负责两件事：
+1. 提供前端静态页面（`dist/`）
+2. 把 `/api/` 和 `/uploads/` 请求转发给后端 API（4000 端口）
 
 ### 创建站点配置文件
 ```bash
@@ -201,18 +283,39 @@ nano /etc/nginx/sites-available/jintaihong
 ```nginx
 server {
     listen 80;
-    server_name YOUR_SERVER_IP;  # 如果有域名就换成 yourdomain.com www.yourdomain.com
+    server_name YOUR_SERVER_IP;  # 有域名就换成 yourdomain.com www.yourdomain.com
 
     root /var/www/jintaihong/dist;
     index index.html;
+
+    # 允许上传报价附件（最大 25MB）
+    client_max_body_size 25m;
 
     # 支持 React Router 的路由刷新（SPA 必需）
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # 静态资源缓存（可选但能加快加载）
-    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot)$ {
+    # 后端 API
+    location /api/ {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    # 后台上传的图片和附件
+    location ^~ /uploads/ {
+        proxy_pass http://127.0.0.1:4000;
+        proxy_set_header Host $host;
+        expires 7d;
+    }
+
+    # 静态资源缓存
+    location ~* \.(js|css|png|jpe?g|gif|svg|ico|webp|woff2?|ttf|eot)$ {
         expires 7d;
         add_header Cache-Control "public, no-transform";
     }
@@ -255,9 +358,12 @@ systemctl reload nginx
 - `http://YOUR_SERVER_IP`（如果没用域名）
 - `http://yourdomain.com`（如果用了域名）
 
-应该能看到网站首页了。
+应该能看到网站首页了。再测试：
+- 打开报价页面，提交一条测试询盘
+- 进入 `http://你的地址/admin`，用 `.env` 里设置的密码登录
+- 后台上传一张图片，确认能显示
 
-## 9. 配置域名和 HTTPS（可选但推荐）
+## 10. 配置域名和 HTTPS（可选但推荐）
 
 如果你买了域名，按以下步骤配置。
 
@@ -292,35 +398,70 @@ certbot --nginx -d yourdomain.com -d www.yourdomain.com
 
 证书会自动续期，Certbot 已经帮你配置好了定时任务。
 
-## 10. 日常维护
-
-以后更新网站只需要这几步。
+## 11. 日常维护
 
 ### 更新代码（用 Git 的情况）
 ```bash
 cd /var/www/jintaihong
 git pull
-npm install  # 如果 package.json 有变化才需要
+npm install            # package.json 有变化时才需要
 npm run build
+
+cd server
+npm install            # server/package.json 有变化时才需要
+npx prisma generate
+npx prisma db push     # 数据模型有变化时才需要，正常更新可跳过
+pm2 restart jintaihong-api
+
 systemctl reload nginx
 ```
 
 ### 更新代码（用 SFTP 上传的情况）
-用 WinSCP 把本地修改后的文件上传到服务器，覆盖对应文件。上传完成后在服务器上重新构建：
+用 WinSCP 把本地修改后的文件上传到服务器，覆盖对应文件。**不要覆盖 `server/.env` 和 `server/prisma/dev.db`。** 上传完成后执行：
 
 ```bash
 cd /var/www/jintaihong
 npm run build
+
+cd server
+npx prisma generate
+pm2 restart jintaihong-api
+
 systemctl reload nginx
 ```
 
-### 查看 Nginx 日志
-如果网站出问题可以查看日志排查：
+### 修改后台密码
 ```bash
-# 访问日志
+nano /var/www/jintaihong/server/.env
+```
+
+修改 `ADMIN_PASSWORD` 后保存，然后重启后端：
+```bash
+pm2 restart jintaihong-api
+```
+
+### 备份数据库和上传文件（重要）
+SQLite 数据库文件在 `server/prisma/dev.db`，上传的图片/附件在 `server/uploads/`。
+
+```bash
+# 备份数据库
+cp /var/www/jintaihong/server/prisma/dev.db ~/backup-db-$(date +%F).db
+
+# 备份上传文件
+tar -czf ~/backup-uploads-$(date +%F).tar.gz -C /var/www/jintaihong/server uploads
+```
+
+建议每周备份一次，并把备份文件下载到本地电脑。
+
+### 查看日志
+```bash
+# 后端日志
+pm2 logs jintaihong-api
+
+# Nginx 访问日志
 tail -f /var/log/nginx/access.log
 
-# 错误日志
+# Nginx 错误日志
 tail -f /var/log/nginx/error.log
 ```
 
@@ -328,23 +469,30 @@ tail -f /var/log/nginx/error.log
 
 ### 重启相关服务
 ```bash
-systemSystem reload nginx
+systemctl reload nginx
 # 或者
 systemctl restart nginx
+
+pm2 restart jintaihong-api
 ```
 
-## 11. 常见问题排查
+## 12. 常见问题排查
 
-| 问�问题 | 原因 | 解决方案 |
+| 问题 | 原因 | 解决方案 |
 |---|---|---|
 | 浏览器访问 IP 显示 Nginx 默认页面 | 还没删除 default 配置或配置文件没生效 | 检查 `sites-enabled`，删除 `default`，重启 Nginx |
-| 刷新页面出现 404 | React Router 是单页应用，需要配置 `try_files` | 检查 NginX 配置中的 `try_files $uri $uri/ /index.html` 是否存在 |
+| 刷新页面出现 404 | React Router 是单页应用，需要配置 `try_files` | 检查 Nginx 配置中的 `try_files $uri $uri/ /index.html` 是否存在 |
 | 样式错乱、图片不显示 | 静态文件路径错误或构建失败 | 确认 `dist/` 中有 `assets/` 文件夹，重新 `npm run build` |
-| `npm install` 很慢或报错 | 网络问题 | 可以换源：`npm config set registry https://registry.npmmirror.com` |
+| 报价表单提交失败 / 502 | 后端 API 没运行或已崩溃 | `pm2 status` 查看状态，`pm2 logs jintaihong-api` 看报错 |
+| 后台上传图片失败 / 413 | Nginx 上传大小限制 | 确认 `client_max_body_size 25m;` 已配置并重启 Nginx |
+| 上传的图片打不开 | Nginx 没有转发 `/uploads/` | 检查 `location ^~ /uploads/` 配置 |
+| 后台登录密码错误 | `.env` 密码不匹配或没重启 | 检查 `ADMIN_PASSWORD`，执行 `pm2 restart jintaihong-api` |
+| 后台数据为空 | 没有初始化数据 | 进入 `server` 目录执行 `npm run seed` |
+| `npm install` 很慢或报错 | 网络问题 | 换源：`npm config set registry https://registry.npmmirror.com` |
 | 无法 SSH 连接 | 防火墙或 IP 错误 | 检查 Vultr 控制台 IP，确认 UFW 放行了 22 端口 |
-| HTTPS 配置失败 | 域名还没解析成功或 80 端口没开放 | 等域名解析生效（ping yourdomain.com 看 IP 是否正确），再运行 Certbot |
+| HTTPS 配置失败 | 域名还没解析成功或 80 端口没开放 | 等域名解析生效（`ping yourdomain.com` 看 IP 是否正确），再运行 Certbot |
 
-## 12. 快速检查清单
+## 13. 快速检查清单
 
 部署完成后，按顺序检查以下项：
 
@@ -352,11 +500,17 @@ systemctl restart nginx
 - [ ] Nginx 正在运行（`systemctl status nginx` 显示 `active (running)`）
 - [ ] 项目已上传到 `/var/www/jintaihong`
 - [ ] `dist/` 文件夹存在且有 `index.html`
+- [ ] 后端依赖已安装，`server/prisma/dev.db` 已生成
+- [ ] `server/.env` 已创建并修改了后台密码
+- [ ] PM2 中 `jintaihong-api` 状态为 `online`
+- [ ] `curl http://127.0.0.1:4000/api/health` 返回 `{"ok":true}`
 - [ ] Nginx 配置文件语法正确（`nginx -t`）
 - [ ] 浏览器能通过 IP 或域名正常访问首页
-- [ ] 导航菜单、图片、按钮都能正常显示
+- [ ] 报价表单可以成功提交，后台询盘能看到记录
+- [ ] 后台能登录并上传图片
 - [ ] 刷新任意页面都不会出现 404
 - [ ] 如果配置了域名，HTTPS 访问正常且有小锁
+- [ ] 已设置数据库和上传文件的定期备份
 - [ ] 防火墙已配置且只开放必要端口
 
 **恭喜！** 如果以上都检查通过，网站就已经成功部署到 Vultr 云服务器上了。

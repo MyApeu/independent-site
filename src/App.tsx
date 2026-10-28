@@ -17,6 +17,7 @@ import AdminProducts from './admin/pages/Products'
 import AdminCategories from './admin/pages/Categories'
 import AdminInquiries from './admin/pages/Inquiries'
 import { CmsProvider } from './context/CmsContext'
+import VisitTracker from './components/VisitTracker'
 
 function isAdmin() {
   return localStorage.getItem('jth_admin_auth') === '1'
@@ -41,6 +42,7 @@ export default function App() {
   return (
     <CmsProvider>
       <BrowserRouter>
+        <VisitTracker />
         <Routes>
           <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
           <Route path="/products" element={<PublicLayout><Products /></PublicLayout>} />

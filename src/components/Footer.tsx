@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Mail, Phone, MapPin } from 'lucide-react'
 import { company } from '../data/company'
-import { productCategories } from '../data/products'
 import { useCms } from '../context/CmsContext'
 
 export default function Footer() {
-  const { footer } = useCms()
+  const { footer, categories } = useCms()
   const footerData = footer || {
     companyNameEn: company.nameEn,
     companyNameCn: company.nameCn,
@@ -59,7 +58,7 @@ export default function Footer() {
           <div className="lg:col-span-3">
             <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider">Products</h3>
             <ul className="space-y-2 text-sm">
-              {productCategories.map(cat => (
+              {categories.map(cat => (
                 <li key={cat.id}>
                   <Link to={`/products/${cat.slug}`} className="text-gray-400 hover:text-brand-orange transition-colors">
                     {cat.name}

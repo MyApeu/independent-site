@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
-import { productCategories } from '../data/products'
 import { useCms } from '../context/CmsContext'
 
 export default function ProductCategories() {
-  const { homepage } = useCms()
+  const { homepage, categories } = useCms()
   return (
     <section className="bg-[#f5f3ef] py-12 lg:py-16">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,7 +20,7 @@ export default function ProductCategories() {
           </div>
           <div className="lg:col-span-8">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {productCategories.map((category) => (
+              {categories.map((category) => (
                 <Link
                   key={category.id}
                   to={`/products/${category.slug}`}

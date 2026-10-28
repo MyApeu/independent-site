@@ -1,29 +1,45 @@
 import { useState } from 'react'
 import { Upload, X } from 'lucide-react'
+import { api } from '../lib/api'
+import { useCms } from '../context/CmsContext'
+
+const emptyForm = {
+  fullName: '',
+  companyName: '',
+  businessEmail: '',
+  phone: '',
+  country: '',
+  productType: '',
+  quantity: '',
+  packagingSize: '',
+  material: '',
+  printingRequirements: '',
+  additionalRequirements: ''
+}
 
 export default function RequestQuote() {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    companyName: '',
-    businessEmail: '',
-    phone: '',
-    country: '',
-    productType: '',
-    quantity: '',
-    packagingSize: '',
-    material: '',
-    printingRequirements: '',
-    additionalRequirements: ''
-  })
+  const { categories } = useCms()
+  const [formData, setFormData] = useState(emptyForm)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [error, setError] = useState('')
   const [files, setFiles] = useState<File[]>([])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus('loading')
-    setTimeout(() => {
+    setError('')
+    try {
+      const payload = new FormData()
+      Object.entries(formData).forEach(([key, value]) => payload.append(key, value))
+      files.forEach((file) => payload.append('attachments', file))
+      await api.inquiries.create(payload)
       setStatus('success')
-    }, 1000)
+      setFormData(emptyForm)
+      setFiles([])
+    } catch (err) {
+      setStatus('error')
+      setError(err instanceof Error ? err.message : '提交失败，请稍后重试')
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -118,12 +134,9 @@ export default function RequestQuote() {
               className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-brand-orange"
             >
               <option value="">Select product type</option>
-              <option value="paper-boxes">Paper Boxes</option>
-              <option value="gift-boxes">Gift Boxes</option>
-              <option value="paper-bags">Paper Bags</option>
-              <option value="folding-cartons">Folding Cartons</option>
-              <option value="food-packaging">Food Packaging</option>
-              <option value="labels-sleeves">Labels & Sleeves</option>
+              {categories.map((category) => (
+                <option key={category.slug} value={category.slug}>{category.name}</option>
+              ))}
               <option value="other">Other Custom Packaging</option>
             </select>
           </div>
@@ -217,13 +230,15 @@ export default function RequestQuote() {
             )}
           </div>
 
-          <div className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 p-4">
-            <strong>Note:</strong> This form is for demonstration only. No data is sent to a backend server. To receive real inquiries, you need to configure a backend API or email service.
-          </div>
+          {status === 'error' && (
+            <div className="text-red-700 bg-red-50 border border-red-200 p-4">
+              {error}
+            </div>
+          )}
 
           {status === 'success' && (
             <div className="text-green-700 bg-green-50 border border-green-200 p-4">
-              Thank you for your inquiry! We will contact you soon. (Demo only - not actually sent)
+              Thank you for your inquiry! We will contact you soon.
             </div>
           )}
 

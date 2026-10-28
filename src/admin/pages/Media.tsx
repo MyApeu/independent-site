@@ -3,37 +3,36 @@ import { Upload, Trash2, Copy } from 'lucide-react'
 import { useCms } from '../../context/CmsContext'
 
 export default function AdminMedia() {
-  const { media, addMedia, removeMedia } = useCms()
+  const { media, uploadMedia, removeMedia } = useCms()
   const [uploading, setUploading] = useState(false)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
+    const list = e.target.files
+    if (!list || list.length === 0) return
     setUploading(true)
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      const reader = new FileReader()
-      reader.onload = () => {
-        const asset = {
-          id: Date.now().toString() + i,
-          name: file.name,
-          url: reader.result as string,
-          alt: file.name.replace(/\.[^/.]+$/, ''),
-          description: '',
-          size: file.size,
-          type: file.type,
-          uploadedAt: new Date().toISOString(),
-        }
-        addMedia(asset)
-        if (i === files.length - 1) setUploading(false)
-      }
-      reader.readAsDataURL(file)
+    try {
+      await uploadMedia(Array.from(list))
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '上传失败')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
     }
   }
 
   const copyUrl = (url: string) => {
-    navigator.clipboard.writeText(url)
+    const absolute = url.startsWith('http') ? url : `${window.location.origin}${url}`
+    navigator.clipboard.writeText(absolute)
     alert('URL 已复制')
+  }
+
+  const remove = async (id: string, name: string) => {
+    if (!window.confirm(`确定删除图片“${name}”吗？`)) return
+    try {
+      await removeMedia(id)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '删除失败')
+    }
   }
 
   return (
@@ -46,7 +45,7 @@ export default function AdminMedia() {
         <label className="px-4 py-2 bg-brand-orange text-white hover:bg-[#e6741a] cursor-pointer flex items-center gap-2">
           <Upload size={18} />
           {uploading ? '上传中...' : '上传图片'}
-          <input type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" />
+          <input type="file" multiple accept="image/*" onChange={handleUpload} className="hidden" disabled={uploading} />
         </label>
       </div>
       <div className="bg-white border border-gray-200">
@@ -67,7 +66,7 @@ export default function AdminMedia() {
                     <button onClick={() => copyUrl(asset.url)} className="flex-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 flex items-center justify-center gap-1">
                       <Copy size={12} /> 复制
                     </button>
-                    <button onClick={() => removeMedia(asset.id)} className="px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100">
+                    <button onClick={() => remove(asset.id, asset.name)} className="px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100">
                       <Trash2 size={12} />
                     </button>
                   </div>

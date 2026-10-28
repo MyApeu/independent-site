@@ -1,11 +1,12 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom'
   import { LayoutDashboard, Image, Home, Package, FolderTree, MessageSquare, LogOut, RefreshCw } from 'lucide-react'
+  import { clearToken } from '../../lib/api'
 
 export default function AdminLayout() {
   const navigate = useNavigate()
 
   const logout = () => {
-    localStorage.removeItem('jth_admin_auth')
+    clearToken()
     navigate('/admin/login')
   }
 

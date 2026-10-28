@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { productCategories } from '../data/products'
 import { ArrowRight, Boxes, Printer, ShieldCheck } from 'lucide-react'
+import { useCms } from '../context/CmsContext'
 
 const advantages = [
   {
@@ -21,7 +21,8 @@ const advantages = [
 ]
 
 export default function Products() {
-  const heroImage = productCategories[0]?.image
+  const { categories } = useCms()
+  const heroImage = categories[0]?.image
 
   return (
     <div className="bg-warm-cream min-h-screen">
@@ -103,7 +104,7 @@ export default function Products() {
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 scroll-mt-24"
       >
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {productCategories.map((category) => (
+          {categories.map((category) => (
             <Link
               key={category.id}
               to={`/products/${category.slug}`}

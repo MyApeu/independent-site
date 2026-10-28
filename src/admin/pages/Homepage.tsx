@@ -1,17 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Save } from 'lucide-react'
 import { useCms } from '../../context/CmsContext'
-import { productCategories } from '../../data/products'
 
 function FooterEdit() {
   const { footer, saveFooter } = useCms()
   const [config, setConfig] = useState(footer)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSave = () => {
-    saveFooter(config)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  useEffect(() => {
+    setConfig(footer)
+  }, [footer])
+
+  const handleSave = async () => {
+    setError('')
+    try {
+      await saveFooter(config)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败')
+    }
   }
 
   return (
@@ -44,6 +53,7 @@ function FooterEdit() {
           <input value={config.phone} onChange={(e) => setConfig({ ...config, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300" />
         </div>
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <button onClick={handleSave} className="px-4 py-2 bg-brand-orange text-white hover:bg-[#e6741a] flex items-center gap-2">
         <Save size={16} />
         {saved ? '已保存！' : '保存页尾'}
@@ -53,14 +63,24 @@ function FooterEdit() {
 }
 
 export default function AdminHomepage() {
-  const { homepage, saveHomepage, media } = useCms()
+  const { homepage, saveHomepage, media, categories } = useCms()
   const [config, setConfig] = useState(homepage)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSave = () => {
-    saveHomepage(config)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  useEffect(() => {
+    setConfig(homepage)
+  }, [homepage])
+
+  const handleSave = async () => {
+    setError('')
+    try {
+      await saveHomepage(config)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败')
+    }
   }
 
   const selectImage = (field: string, value: string) => {
@@ -79,6 +99,8 @@ export default function AdminHomepage() {
           {saved ? '已保存！' : '保存并发布'}
         </button>
       </div>
+
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
 
       <div className="space-y-6">
         <div className="bg-white border border-gray-200 p-6">
@@ -168,7 +190,7 @@ export default function AdminHomepage() {
         <div className="bg-white border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4">产品分类</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {productCategories.map(cat => (
+            {categories.map(cat => (
               <div key={cat.slug}>
                 <label className="block text-sm font-medium mb-2">{cat.name}</label>
                 <input

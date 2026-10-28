@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js",
+    "dev:api": "npm --prefix server run dev",
+    "setup:api": "npm --prefix server run setup",
     "build": "node ./node_modules/typescript/bin/tsc -b && node ./node_modules/vite/bin/vite.js build",
     "preview": "node ./node_modules/vite/bin/vite.js preview"
   },

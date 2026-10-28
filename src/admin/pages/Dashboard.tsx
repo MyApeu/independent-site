@@ -1,52 +1,57 @@
+import { useCallback, useEffect, useState } from 'react'
 import { Image, Package, FolderTree, MessageSquare, Users, Eye } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { useCms } from '../../context/CmsContext'
+import { api, type Stats } from '../../lib/api'
 
 export default function AdminDashboard() {
-  const { media } = useCms()
-  const [stats, setStats] = useState({
-    online: 1,
-    historyOnline: 156,
-    monthOnline: 2847,
-    pageViews: 12456,
-  })
-  const [ipSources] = useState([
-    { ip: '192.168.1.100', location: '北京', count: 45 },
-    { ip: '10.0.0.50', location: '上海', count: 38 },
-    { ip: '172.16.0.10', location: '广州', count: 32 },
-    { ip: '203.119.45.67', location: '深圳', count: 28 },
-  ])
+  const { media, categories } = useCms()
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    setStats({
-      online: Math.floor(Math.random() * 5) + 1,
-      historyOnline: 156 + Math.floor(Math.random() * 20),
-      monthOnline: 2847 + Math.floor(Math.random() * 100),
-      pageViews: 12456 + Math.floor(Math.random() * 500),
-    })
+  const load = useCallback(async () => {
+    try {
+      setStats(await api.stats.get())
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '统计数据加载失败')
+    }
   }, [])
 
+  useEffect(() => {
+    void load()
+    const timer = window.setInterval(() => void load(), 60000)
+    return () => window.clearInterval(timer)
+  }, [load])
+
   const statItems = [
-    { label: '产品', value: 7, icon: Package, color: 'bg-blue-500' },
-    { label: '分类', value: 7, icon: FolderTree, color: 'bg-green-500' },
-    { label: '媒体素材', value: media.length, icon: Image, color: 'bg-purple-500' },
-    { label: '询盘', value: 0, icon: MessageSquare, color: 'bg-orange-500' },
+    { label: '产品', value: stats?.counts.products ?? '-', icon: Package, color: 'bg-blue-500' },
+    { label: '分类', value: categories.length, icon: FolderTree, color: 'bg-green-500' },
+    { label: '媒体素材', value: stats?.counts.media ?? media.length, icon: Image, color: 'bg-purple-500' },
+    { label: '询盘', value: stats?.counts.inquiries ?? '-', icon: MessageSquare, color: 'bg-orange-500' },
   ]
 
   const visitStats = [
-    { label: '在线用户', value: stats.online, icon: Users, color: 'bg-emerald-500' },
-    { label: '历史在线', value: stats.historyOnline, icon: Users, color: 'bg-cyan-500' },
-    { label: '本月在线', value: stats.monthOnline, icon: Users, color: 'bg-indigo-500' },
-    { label: '页面访问统计', value: stats.pageViews, icon: Eye, color: 'bg-pink-500' },
+    { label: '在线用户', value: stats?.online ?? '-', icon: Users, color: 'bg-emerald-500' },
+    { label: '历史在线', value: stats?.historyOnline ?? '-', icon: Users, color: 'bg-cyan-500' },
+    { label: '本月在线', value: stats?.monthOnline ?? '-', icon: Users, color: 'bg-indigo-500' },
+    { label: '页面访问统计', value: stats?.pageViews ?? '-', icon: Eye, color: 'bg-pink-500' },
   ]
+
+  const dailyMax = stats ? Math.max(1, ...stats.daily.map((item) => item.count)) : 1
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">仪表盘</h1>
-        <p className="text-gray-600">欢迎使用金泰宏 CMS</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">仪表盘</h1>
+          <p className="text-gray-600">欢迎使用金泰宏 CMS</p>
+        </div>
+        <button onClick={() => void load()} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-sm">刷新</button>
       </div>
+
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {statItems.map((stat) => {
           const Icon = stat.icon
@@ -91,24 +96,45 @@ export default function AdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white border border-gray-200 p-6">
           <h2 className="text-lg font-semibold mb-4">IP来源统计</h2>
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left p-2 text-sm">IP地址</th>
-                <th className="text-left p-2 text-sm">地区</th>
-                <th className="text-right p-2 text-sm">访问次数</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ipSources.map((ip, idx) => (
-                <tr key={idx} className="border-b last:border-0">
-                  <td className="p-2 text-sm font-mono">{ip.ip}</td>
-                  <td className="p-2 text-sm">{ip.location}</td>
-                  <td className="p-2 text-sm text-right">{ip.count}</td>
+          {stats && stats.ipSources.length > 0 ? (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left p-2 text-sm">IP地址</th>
+                  <th className="text-right p-2 text-sm">访问次数</th>
                 </tr>
+              </thead>
+              <tbody>
+                {stats.ipSources.map((source) => (
+                  <tr key={source.ip} className="border-b last:border-0">
+                    <td className="p-2 text-sm font-mono break-all">{source.ip}</td>
+                    <td className="p-2 text-sm text-right">{source.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-sm text-gray-500">暂无访问数据。访问前台页面后即可看到统计。</p>
+          )}
+        </div>
+
+        <div className="bg-white border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold mb-4">近 14 天访问量</h2>
+          {stats ? (
+            <div className="flex items-end gap-1 h-40">
+              {stats.daily.map((item) => (
+                <div key={item.date} className="flex-1 flex flex-col items-center gap-1" title={`${item.date}: ${item.count}`}>
+                  <div
+                    className="w-full bg-brand-orange/80 hover:bg-brand-orange transition-colors"
+                    style={{ height: `${Math.max(2, (item.count / dailyMax) * 100)}%` }}
+                  />
+                  <span className="text-[9px] text-gray-400">{item.date.slice(5)}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">加载中...</p>
+          )}
         </div>
       </div>
 

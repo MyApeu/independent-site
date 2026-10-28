@@ -1,20 +1,26 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock } from 'lucide-react'
+import { api, setToken } from '../../lib/api'
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Development only - password should be configured via env
-    if (password === 'admin123') {
-      localStorage.setItem('jth_admin_auth', '1')
+    setError('')
+    setLoading(true)
+    try {
+      const { token } = await api.auth.login(password)
+      setToken(token)
       navigate('/admin')
-    } else {
-      setError('密码错误')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '登录失败')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -40,10 +46,9 @@ export default function AdminLogin() {
             />
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button type="submit" className="w-full bg-brand-orange hover:bg-[#e6741a] text-white py-2.5 flex items-center justify-center gap-2">
-            <Lock size={18} /> 登录
+          <button type="submit" disabled={loading} className="w-full bg-brand-orange hover:bg-[#e6741a] text-white py-2.5 flex items-center justify-center gap-2 disabled:opacity-50">
+            <Lock size={18} /> {loading ? '登录中...' : '登录'}
           </button>
-          <p className="text-xs text-gray-500 text-center">开发密码：admin123</p>
         </form>
       </div>
     </div>

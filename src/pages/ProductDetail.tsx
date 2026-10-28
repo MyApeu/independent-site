@@ -1,10 +1,35 @@
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { productCategories } from '../data/products'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { useCms } from '../context/CmsContext'
+import { api, type Product } from '../lib/api'
 
 export default function ProductDetail() {
   const { slug } = useParams()
-  const category = productCategories.find(c => c.slug === slug)
+  const { categories } = useCms()
+  const category = categories.find((item) => item.slug === slug)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!slug) return
+    let alive = true
+    setLoading(true)
+    api.products
+      .list({ category: slug })
+      .then((list) => {
+        if (alive) setProducts(list)
+      })
+      .catch(() => {
+        if (alive) setProducts([])
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [slug])
 
   if (!category) {
     return (
@@ -42,6 +67,44 @@ export default function ProductDetail() {
             </Link>
           </div>
         </div>
+
+        {!loading && products.length > 0 && (
+          <div className="mt-14">
+            <h2 className="text-2xl font-bold mb-6">Available Products</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map((product) => (
+                <div key={product.id} className="bg-white border border-gray-200 overflow-hidden group">
+                  <div className="aspect-[4/3] overflow-hidden bg-gray-100">
+                    <img
+                      src={product.image || category.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-lg font-semibold mb-1">{product.name}</h3>
+                    {product.summary && <p className="text-sm text-gray-600 mb-3">{product.summary}</p>}
+                    {product.specs.length > 0 && (
+                      <ul className="flex flex-wrap gap-2">
+                        {product.specs.slice(0, 4).map((spec) => (
+                          <li key={spec} className="text-[11px] px-2 py-1 bg-[#f5f3ef] text-gray-700">
+                            {spec}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Link
+                      to="/request-quote"
+                      className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-orange"
+                    >
+                      Get a quote <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

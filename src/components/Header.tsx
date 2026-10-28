@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Menu, X, Search, ChevronDown } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { company } from '../data/company'
-import { productCategories } from '../data/products'
+import { useCms } from '../context/CmsContext'
 import FlagIcon, { type FlagCountry } from './FlagIcon'
 
 type Language = {
@@ -24,6 +24,7 @@ const languages: Language[] = [
 ]
 
 export default function Header() {
+  const { categories } = useCms()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [productsOpen, setProductsOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
@@ -75,7 +76,7 @@ export default function Header() {
                      onMouseEnter={openProducts}
                      onMouseLeave={closeProducts}>
                   <div className="bg-[#111111] border border-white/10 shadow-xl">
-                    {productCategories.map(cat => (
+                    {categories.map(cat => (
                       <Link
                         key={cat.id}
                         to={`/products/${cat.slug}`}
